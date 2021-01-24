@@ -4,7 +4,7 @@ import { useMachine, useService } from "@xstate/react";
 
 const initialState = "inactive";
 
-const alarmMachine = {
+const alarmMachine = createMachine({
   initial: initialState,
   states: {
     inactive: {
@@ -24,10 +24,15 @@ const alarmMachine = {
       },
     },
   },
-};
+});
+
+console.log(
+  "alarmMachine.transition('pending', { type: 'SUCCESS'}) :>> ",
+  alarmMachine.transition("pending", { type: "SUCCESS" })
+);
 
 const alarmReducer = (state, event) => {
-  const nextState = alarmMachine.states[state].on[event.type] || state;
+  const nextState = alarmMachine.transition(state, event);
   return nextState;
 
   // switch (state) {
@@ -56,19 +61,21 @@ const alarmReducer = (state, event) => {
 };
 
 export const ScratchApp = () => {
-  const [status, dispatch] = useReducer(alarmReducer, initialState);
+  const [state, send] = useMachine(alarmMachine);
+
+  const status = state.value; // 'pending' 'active' 'inactive'
 
   useEffect(() => {
     if (status === "pending") {
       const timeout = setTimeout(() => {
-        dispatch({ type: "SUCCESS" });
+        send("SUCCESS");
       }, 2000);
 
       return () => {
         clearTimeout(timeout);
       };
     }
-  }, [status]);
+  }, [send, status]);
   return (
     <div className="scratch">
       <div className="alarm">
@@ -83,7 +90,7 @@ export const ScratchApp = () => {
           data-active={status === "active" || undefined}
           style={{ opacity: status === "pending" ? 0.5 : 1 }}
           onClick={() => {
-            dispatch({ type: "TOGGLE" });
+            send({ type: "TOGGLE" });
           }}
         ></div>
       </div>
